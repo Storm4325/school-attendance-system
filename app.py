@@ -7,69 +7,33 @@ from sqlalchemy import create_engine, text
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="نظام مدرسة الشيخ عبدالعزيز", page_icon="🏫", layout="wide")
 
-# الروابط الرسمية للمشروع
+# الروابط الرسمية
 CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQXCHOY9CHVwdruWhQEvhtgZm9gadjqY_PGHobJvG2OcqZ4Md1e3MxMctBVP6OwYpbq0Fvv5PuQFJ33/pub?output=csv"
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzHDhKY2VZxFu0RyUf9P-3jnm9OZIzXcY3H59XhFo9ca5vKJNt-jWJUlQYKRvmq0NEq/exec"
 
 CLASS_NAMES = {"11": "1 علم 1", "12": "1 علم 2", "21": "2 علم 1", "22": "2 علم 2", "31": "3 علم 1", "32": "32 علم 2"}
 
-# 2. التنسيق الجمالي (CSS) - تحسين وضوح التقرير
+# 2. التنسيق الجمالي (CSS)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-    
     html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Cairo', sans-serif; direction: rtl !important; text-align: right !important;
         background-color: #f1f5f9;
     }
-
-    /* العنوان الرئيسي H1 موسط */
-    .main-title { 
-        text-align: center; 
-        color: #1e3a8a; 
-        font-weight: 900; 
-        font-size: 2.5rem; 
-        margin: 20px 0;
-    }
-
-    input[type="password"], input[type="text"] {
-        text-align: left !important; direction: ltr !important;
-    }
-
-    div[data-testid="stSelectbox"] { max-width: 500px; margin: 0 auto; }
-
-    .sidebar-user {
-        display: flex; align-items: center; justify-content: flex-start;
-        gap: 10px; flex-direction: row-reverse;
-        font-weight: 700; color: #1e3a8a;
-    }
-
+    .main-title { text-align: center; color: #1e3a8a; font-weight: 900; font-size: 2.5rem; margin: 20px 0; }
+    input[type="password"], input[type="text"] { text-align: left !important; direction: ltr !important; }
     .student-card {
         background: white; padding: 15px; border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 10px;
         border-right: 8px solid #1e3a8a; text-align: right;
     }
-    
-    /* صندوق التقرير المطور - موسط وواضح جداً */
     .report-card {
-        max-width: 600px;
-        margin: 50px auto;
-        background: #ebf8ff; /* خلفية سماوية فاتحة وواضحة */
-        padding: 40px;
-        border-radius: 25px;
-        border: 3px solid #3182ce;
-        text-align: center;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        max-width: 700px; margin: 50px auto; background: #ebf8ff;
+        padding: 40px; border-radius: 25px; border: 3px solid #3182ce;
+        text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     }
-    
-    .report-header { color: #2c5282; font-weight: 900; font-size: 1.8rem; margin-bottom: 15px; }
-    
-    /* تنسيق أرقام الإحصائيات */
-    [data-testid="stMetricValue"] {
-        font-size: 2.2rem !important;
-        color: #2b6cb0 !important;
-        font-weight: 800 !important;
-    }
+    .status-tag { padding: 2px 10px; border-radius: 5px; font-size: 0.9rem; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -77,13 +41,13 @@ st.markdown("""
 try:
     db_url = st.secrets["DATABASE_URL"]
     engine = create_engine(db_url)
-except Exception:
-    st.error("⚠️ خطأ: لم يتم العثور على DATABASE_URL في إعدادات Secrets.")
+except:
+    st.error("⚠️ خطأ في إعدادات DATABASE_URL")
     st.stop()
 
+# إدارة الجلسة والذكاء الصناعي للرصد
 if 'auth' not in st.session_state: st.session_state.auth = False
-# تهيئة بيانات الرصد في حال لم تكن موجودة
-if 'attendance_counts' not in st.session_state: st.session_state.attendance_counts = {"absent": 0, "late": 0}
+if 'log' not in st.session_state: st.session_state.log = {} # لتخزين حالة كل طالب (غياب/تأخير)
 
 def update_pwd(u, p):
     try:
@@ -97,43 +61,28 @@ if not st.session_state.auth:
     with col_mid:
         st.markdown('<div style="margin-top:50px; padding:30px; background:#fff; border-radius:20px; box-shadow:0 10px 25px rgba(0,0,0,0.1);">', unsafe_allow_html=True)
         st.markdown('<h2 style="text-align:center; color:#1e3a8a;">🏫 دخول النظام</h2>', unsafe_allow_html=True)
-        user_input = st.text_input("اسم المستخدم", key="user_login")
-        pass_input = st.text_input("كلمة المرور", type="password", key="pass_login")
+        u_in = st.text_input("اسم المستخدم", key="u_l")
+        p_in = st.text_input("كلمة المرور", type="password", key="p_l")
         if st.button("دخول", use_container_width=True):
-            try:
-                df = pd.read_csv(CSV_URL)
-                match = df[(df['username'].astype(str).str.strip() == user_input.strip()) & 
-                           (df['password'].astype(str).str.strip() == pass_input.strip())]
-                if not match.empty:
-                    st.session_state.auth = True
-                    st.session_state.user_info = match.iloc[0].to_dict()
-                    st.rerun()
-                else: st.error("❌ البيانات غير صحيحة")
-            except: st.error("⚠️ فشل الاتصال بالسجل")
+            df = pd.read_csv(CSV_URL)
+            match = df[(df['username'].astype(str).str.strip() == u_in.strip()) & (df['password'].astype(str).str.strip() == p_in.strip())]
+            if not match.empty:
+                st.session_state.auth = True
+                st.session_state.user_info = match.iloc[0].to_dict()
+                st.rerun()
+            else: st.error("❌ البيانات غير صحيحة")
         st.markdown('</div>', unsafe_allow_html=True)
 
 # --- النظام الرئيسي ---
 else:
     with st.sidebar:
-        full_name = st.session_state.user_info.get('full_name', 'أستاذ')
-        st.markdown(f'<div class="sidebar-user"><span>الأستاذ {full_name}</span><span>👤</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align:right; font-weight:700; color:#1e3a8a;">👤 الأستاذ {st.session_state.user_info.get("full_name")}</div>', unsafe_allow_html=True)
         st.divider()
-        
-        with st.expander("🔑 تغيير كلمة المرور"):
-            new_p = st.text_input("الكلمة الجديدة", type="password")
-            if st.button("تحديث في الشيت", use_container_width=True):
-                if update_pwd(st.session_state.user_info['username'], new_p):
-                    st.success("✅ تم تحديث كلمة المرور")
-                else: st.error("❌ فشل الاتصال")
-        
-        st.divider()
-        if st.button("🚪 تسجيل الخروج", use_container_width=True):
+        if st.button("🚪 خروج", use_container_width=True):
             st.session_state.auth = False
             st.rerun()
 
-    # اسم المدرسة كعنوان رئيسي موسط
     st.markdown('<h1 class="main-title">مدرسة الشيخ عبدالعزيز بن محمد آل خليفة الثانوية للبنين</h1>', unsafe_allow_html=True)
-    st.markdown(f'<h3 style="text-align:center; color:#4a5568;">مرحباً بك أستاذ {st.session_state.user_info.get("full_name")}</h3>', unsafe_allow_html=True)
     st.write("---")
 
     try:
@@ -141,46 +90,66 @@ else:
             res_sec = conn.execute(text("SELECT DISTINCT class_section FROM students ORDER BY class_section")).fetchall()
         sections = [str(r[0]) for r in res_sec]
         
-        st.markdown('<p style="text-align:center; font-weight:bold; color:#1e3a8a;">🎯 اختر الصف الدراسي</p>', unsafe_allow_html=True)
-        choice_label = st.selectbox("", ["-- اختر من القائمة --"] + [CLASS_NAMES.get(s, f"صف {s}") for s in sections], label_visibility="collapsed")
+        choice_label = st.selectbox("🎯 اختر الصف الدراسي", ["-- اختر --"] + [CLASS_NAMES.get(s, f"صف {s}") for s in sections])
         
-        if choice_label != "-- اختر من القائمة --":
+        if choice_label != "-- اختر --":
             sec_id = [k for k, v in CLASS_NAMES.items() if v == choice_label][0]
             with engine.connect() as conn:
                 students = conn.execute(text("SELECT student_id, full_name, cpr FROM students WHERE class_section = :c ORDER BY full_name"), {"c": sec_id}).fetchall()
             
-            st.write("<br>", unsafe_allow_html=True)
             for std in students:
+                sid = str(std[0])
+                current_status = st.session_state.log.get(sid, "حاضر")
+                
+                # بطاقة الطالب مع الإيموجيات المطلوبة
                 st.markdown(f'''
                     <div class="student-card">
-                        <div style="font-size:1.3rem; font-weight:bold; color:#1e3a8a;">{std[1]}</div>
-                        <div style="color:#64748b;">رقم الطالب: {std[0]} | البطاقة الذكية: {std[2]}</div>
+                        <div style="font-size:1.2rem; font-weight:bold; color:#1e3a8a;">👨‍🎓 {std[1]}</div>
+                        <div style="color:#64748b; font-size:0.9rem;">
+                            🆔 الرقم التسلسلي: {std[0]} | 💳 البطاقة الذكية (CPR): {std[2]}
+                        </div>
+                        <div style="margin-top:5px;">الحالة الحالية: <b>{current_status}</b></div>
                     </div>
                 ''', unsafe_allow_html=True)
                 
                 c1, c2, c3, _ = st.columns([1, 1, 1, 3])
-                with c1: st.button("🚫 غياب", key=f"a_{std[0]}", use_container_width=True)
-                with c2: st.button("⏰ تأخير", key=f"l_{std[0]}", use_container_width=True)
-                with c3: st.button("🔄 تراجع", key=f"r_{std[0]}", use_container_width=True)
+                
+                # منطق الأزرار الذكي
+                with c1:
+                    # زر غياب: متاح دائماً إلا إذا كان الطالب غائباً أصلاً
+                    if st.button("🚫 غياب", key=f"a_{sid}", use_container_width=True, disabled=(current_status=="غياب")):
+                        st.session_state.log[sid] = "غياب"
+                        st.rerun()
+                
+                with c2:
+                    # زر تأخير: متاح للحاضر، وأيضاً للغائب (لتحويله لتأخير)
+                    if st.button("⏰ تأخير", key=f"l_{sid}", use_container_width=True, disabled=(current_status=="تأخير")):
+                        st.session_state.log[sid] = "تأخير"
+                        st.rerun()
+                
+                with c3:
+                    # زر تراجع: لإرجاع الطالب لحالة "حاضر"
+                    if st.button("🔄 تراجع", key=f"r_{sid}", use_container_width=True, disabled=(current_status=="حاضر")):
+                        st.session_state.log[sid] = "حاضر"
+                        st.rerun()
 
-            # --- التقرير النهائي (موسط وبخلفية مميزة) ---
-            st.markdown('<div class="report-card">', unsafe_allow_html=True)
-            st.markdown(f'<div class="report-header">📋 ملخص رصد {choice_label}</div>', unsafe_allow_html=True)
+            # --- التقرير الحقيقي والذكي ---
+            absent_count = list(st.session_state.log.values()).count("غياب")
+            late_count = list(st.session_state.log.values()).count("تأخير")
             
-            col_r1, col_r2, col_r3 = st.columns(3)
-            with col_r1:
-                st.metric("الطلاب", len(students))
-            with col_r2:
-                st.metric("الغياب", st.session_state.attendance_counts["absent"])
-            with col_r3:
-                st.metric("التأخير", st.session_state.attendance_counts["late"])
+            st.markdown('<div class="report-card">', unsafe_allow_html=True)
+            st.markdown(f'<h2 style="color:#2c5282;">📋 تقرير رصد {choice_label} النهائي</h2>', unsafe_allow_html=True)
+            
+            r1, r2, r3 = st.columns(3)
+            r1.metric("👥 إجمالي الفصل", len(students))
+            r2.metric("🚫 إجمالي الغياب", absent_count)
+            r3.metric("⏰ إجمالي التأخير", late_count)
             
             st.write("<br>", unsafe_allow_html=True)
-            # الزر متاح دائماً حتى لو الغياب 0
             if st.button("📤 إرسال التقرير النهائي للإدارة", use_container_width=True, type="primary"):
                 st.balloons()
-                st.success(f"✅ تم إرسال تقرير {choice_label} بنجاح.")
+                st.success(f"✅ تم إرسال التقرير: {absent_count} غياب و {late_count} تأخير.")
             st.markdown('</div>', unsafe_allow_html=True)
 
     except Exception as e:
-        st.error(f"❌ خطأ في الاتصال بقاعدة البيانات.")
+        st.error(f"❌ خطأ في النظام")
