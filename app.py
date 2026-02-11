@@ -138,7 +138,7 @@ else:
                 st.markdown(f'''
                     <div class="student-card">
                         <div style="font-size:1.4rem; font-weight:bold; color:white;">👨‍🎓 {std[1]}</div>
-                        <div style="color:rgba(255,255,255,0.8); font-size:1rem;">🆔 التسلسلي: {std[0]} | 💳 البطاقة: {std[2]}</div>
+                        <div style="color:rgba(255,255,255,0.8); font-size:1rem;">🆔 الأكاديمي: {std[0]} | 💳 البطاقة: {std[2]}</div>
                         <div style="font-weight:bold; color:#fcd34d;">الحالة: {current_status}</div>
                     </div>
                 ''', unsafe_allow_html=True)
@@ -168,3 +168,4 @@ else:
 
     except Exception as e:
         st.error(f"⚠️ خطأ في قاعدة البيانات")
+
