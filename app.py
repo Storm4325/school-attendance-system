@@ -13,7 +13,7 @@ SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzHDhKY2VZxFu0RyUf9P-3jnm9
 
 CLASS_NAMES = {"11": "1 علم 1", "12": "1 علم 2", "21": "2 علم 1", "22": "2 علم 2", "31": "3 علم 1", "32": "32 علم 2"}
 
-# 2. التنسيق الزجاجي والمتحرك (Advanced CSS)
+# 2. التنسيق الزجاجي المتقدم مع التفاعل (Advanced CSS)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
@@ -33,24 +33,37 @@ st.markdown("""
         100% { background-position: 0% 50%; }
     }
 
-    /* تأثير الزجاج للعناصر */
-    .stMarkdown, .main-title, .student-card, .report-card {
-        color: white !important;
-    }
-
     .main-title { 
-        text-align: center; font-weight: 900; font-size: 2.8rem; 
-        text-shadow: 2px 2px 10px rgba(0,0,0,0.3); margin: 20px 0;
+        text-align: center; color: white !important; font-weight: 900; 
+        font-size: 2.8rem; text-shadow: 2px 2px 10px rgba(0,0,0,0.3); margin: 20px 0;
     }
 
-    /* بطاقة الطالب الزجاجية */
+    /* بطاقة الطالب الزجاجية مع تفاعل التكبير */
     .student-card {
         background: rgba(255, 255, 255, 0.1);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2);
         padding: 20px; border-radius: 20px;
-        margin-bottom: 15px; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        margin-bottom: 15px; 
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        text-align: right; /* محاذاة الأسماء لليمين */
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* تأثير حركي مرن */
+    }
+
+    /* تفاعل عند مرور الماوس على اسم الطالب */
+    .student-card:hover {
+        transform: scale(1.02); /* تكبير بسيط */
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid #fcd34d; /* تغيير لون الحدود للأصفر الذهبي عند التفاعل */
+    }
+
+    .student-name {
+        font-size: 1.5rem; font-weight: bold; color: white; margin-bottom: 5px;
+    }
+
+    .student-info {
+        color: rgba(255, 255, 255, 0.8); font-size: 1rem;
     }
 
     /* صندوق التقرير الزجاجي الموسط */
@@ -59,23 +72,15 @@ st.markdown("""
         background: rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(15px);
         border-radius: 30px; border: 2px solid rgba(255, 255, 255, 0.3);
-        padding: 40px; text-align: center;
+        padding: 40px; text-align: center; color: white;
     }
 
-    /* تعديل ألوان الـ Metrics لتناسب الزجاج */
     [data-testid="stMetricValue"] { color: #ffffff !important; font-weight: 900 !important; }
     [data-testid="stMetricLabel"] { color: #d1d5db !important; }
 
     /* تحسين شكل الأزرار */
     .stButton>button {
-        border-radius: 12px; border: none; font-weight: bold;
-        transition: all 0.3s ease;
-    }
-    .stButton>button:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-
-    input[type="password"], input[type="text"] {
-        background: rgba(255, 255, 255, 0.9) !important;
-        color: #1e3a8a !important; text-align: left !important; direction: ltr !important;
+        border-radius: 12px; border: none; font-weight: bold; transition: all 0.3s ease;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -95,7 +100,7 @@ if 'log' not in st.session_state: st.session_state.log = {}
 if not st.session_state.auth:
     _, col_mid, _ = st.columns([1, 1.2, 1])
     with col_mid:
-        st.markdown('<div style="margin-top:50px; padding:30px; background:rgba(255,255,255,0.2); backdrop-filter:blur(20px); border-radius:25px; border:1px solid rgba(255,255,255,0.3); box-shadow:0 15px 35px rgba(0,0,0,0.2);">', unsafe_allow_html=True)
+        st.markdown('<div style="margin-top:50px; padding:30px; background:rgba(255,255,255,0.2); backdrop-filter:blur(20px); border-radius:25px; border:1px solid rgba(255,255,255,0.3);">', unsafe_allow_html=True)
         st.markdown('<h2 style="text-align:center; color:white;">🏫 دخول النظام</h2>', unsafe_allow_html=True)
         u_in = st.text_input("اسم المستخدم", key="u_l")
         p_in = st.text_input("كلمة المرور", type="password", key="p_l")
@@ -112,7 +117,7 @@ if not st.session_state.auth:
 # --- النظام الرئيسي ---
 else:
     with st.sidebar:
-        st.markdown(f'<div style="text-align:right; font-weight:700; color:white;">👤 الأستاذ {st.session_state.user_info.get("full_name")}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align:right; font-weight:700; color:white;">👤 الأستاذ {st.session_state.user_info.get('full_name')}</div>', unsafe_allow_html=True)
         st.divider()
         if st.button("🚪 خروج", use_container_width=True):
             st.session_state.auth = False
@@ -138,13 +143,15 @@ else:
                 sid = str(std[0])
                 current_status = st.session_state.log.get(sid, "حاضر")
                 
+                # بطاقة الطالب التفاعلية مع محاذاة لليمين
                 st.markdown(f'''
                     <div class="student-card">
-                        <div style="font-size:1.4rem; font-weight:bold;">👨‍🎓 {std[1]}</div>
-                        <div style="color:rgba(255,255,255,0.8); font-size:1rem; margin:10px 0;">
-                            🆔 التسلسلي: {std[0]} | 💳 البطاقة: {std[2]}
+                        <div class="student-name">👨‍🎓 {std[1]}</div>
+                        <div class="student-info">
+                            🆔 الرقم التسلسلي: {std[0]} <br>
+                            💳 بطاقة الهوية (CPR): {std[2]}
                         </div>
-                        <div style="font-weight:bold; color:#fcd34d;">الحالة: {current_status}</div>
+                        <div style="margin-top:10px; font-weight:bold; color:#fcd34d;">الحالة المرصودة: {current_status}</div>
                     </div>
                 ''', unsafe_allow_html=True)
                 
@@ -162,15 +169,15 @@ else:
                         st.session_state.log[sid] = "حاضر"
                         st.rerun()
 
-            # --- التقرير الزجاجي الذكي ---
+            # --- التقرير النهائي التفاعلي ---
             abs_count = list(st.session_state.log.values()).count("غياب")
             lat_count = list(st.session_state.log.values()).count("تأخير")
             
             st.markdown('<div class="report-card">', unsafe_allow_html=True)
-            st.markdown(f'<h2 style="color:white; margin-bottom:20px;">📋 تقرير رصد {choice_label}</h2>', unsafe_allow_html=True)
+            st.markdown(f'<h2 style="color:white; margin-bottom:20px;">📊 ملخص تقرير {choice_label}</h2>', unsafe_allow_html=True)
             
             r1, r2, r3 = st.columns(3)
-            r1.metric("👥 الطلاب", len(students))
+            r1.metric("👥 إجمالي الطلاب", len(students))
             r2.metric("🚫 الغياب", abs_count)
             r3.metric("⏰ التأخير", lat_count)
             
