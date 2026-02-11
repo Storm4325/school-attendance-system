@@ -26,29 +26,24 @@ st.markdown("""
     
     @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-    /* --- حل مشكلة التداخل في خانات الإدخال --- */
+    /* حل مشكلة التداخل في حقول الإدخال */
     .stTextInput div[data-baseweb="input"] {
-        margin-top: 15px !important;
+        margin-top: 10px !important;
         margin-bottom: 5px !important;
-        padding: 2px !important;
     }
 
-    /* محاذاة النص لليسار في اليوزر والباسورد */
     [data-testid="stTextInput"] input {
         text-align: left !important;
         direction: ltr !important;
     }
 
-    /* توسيط عنوان دخول النظام */
     .login-header {
         text-align: center !important;
         color: #1e3a8a;
         font-weight: 900;
-        margin-bottom: 25px;
-        display: block;
+        margin-bottom: 20px;
     }
 
-    /* الأستاذ في اليمين (Sidebar) بناءً على الصورة */
     .sidebar-user {
         display: flex;
         align-items: center;
@@ -56,25 +51,8 @@ st.markdown("""
         gap: 10px;
         flex-direction: row-reverse;
         font-weight: 700;
-        font-size: 1.1rem;
+        font-size: 1.2rem;
         color: #1e3a8a;
-        margin-bottom: 15px;
-    }
-
-    /* تفاعل قائمة الاختيار */
-    div[data-baseweb="select"] {
-        transition: all 0.3s ease;
-        border-radius: 12px;
-    }
-    div[data-baseweb="select"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(30, 58, 138, 0.1);
-    }
-
-    .login-card {
-        background: rgba(255, 255, 255, 0.3); backdrop-filter: blur(20px);
-        border-radius: 25px; padding: 35px; border: 1px solid rgba(255, 255, 255, 0.4);
-        margin-top: -30px;
     }
 
     .student-card {
@@ -82,7 +60,7 @@ st.markdown("""
         padding: 20px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, 0.2);
         margin-bottom: 12px; text-align: right; transition: all 0.3s ease;
     }
-    .student-card:hover { background: rgba(255, 255, 255, 0.7); transform: scale(1.01); border-right: 10px solid #1e3a8a; }
+    .student-card:hover { background: rgba(255, 255, 255, 0.7); transform: scale(1.005); border-right: 10px solid #1e3a8a; }
 
     .glass-header {
         background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(15px);
@@ -92,15 +70,16 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-load_dotenv("url.env")
-engine = create_engine(os.getenv("DATABASE_URL"))
+# استدعاء الرابط من Secrets (لحماية قاعدة البيانات)
+db_url = st.secrets.get("DATABASE_URL") or os.getenv("DATABASE_URL")
+if db_url:
+    engine = create_engine(db_url)
 
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'attendance' not in st.session_state: st.session_state.attendance = {}
 if 'submitted' not in st.session_state: st.session_state.submitted = False
 
-# وظيفة تحديث الباسورد حصراً
-def update_password_only(u, p):
+def update_pwd(u, p):
     try:
         r = requests.post(SCRIPT_URL, json={"username": u, "newPassword": p})
         return r.text == "Success"
@@ -110,7 +89,7 @@ def update_password_only(u, p):
 if not st.session_state.auth:
     _, col_mid, _ = st.columns([1, 1.2, 1])
     with col_mid:
-        st.markdown('<div class="login-card">', unsafe_allow_html=True)
+        st.markdown('<div style="background: rgba(255,255,255,0.3); padding:35px; border-radius:25px; border: 1px solid rgba(255,255,255,0.4);">', unsafe_allow_html=True)
         st.markdown('<h2 class="login-header">🏫 دخول النظام</h2>', unsafe_allow_html=True)
         u = st.text_input("اسم المستخدم", placeholder="Username")
         p = st.text_input("كلمة المرور", type="password", placeholder="••••••••")
@@ -127,31 +106,21 @@ if not st.session_state.auth:
 # --- النظام الرئيسي ---
 else:
     with st.sidebar:
-        # محاذاة الأستاذ لليمين مع الأيقونة
-        st.markdown(f"""
-            <div class="sidebar-user">
-                <span>الأستاذ {st.session_state.user_info['full_name']}</span>
-                <span style="font-size: 1.4rem;">👤</span>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="sidebar-user"><span>الأستاذ {st.session_state.user_info["full_name"]}</span><span style="font-size:1.5rem;">👤</span></div>', unsafe_allow_html=True)
         st.divider()
-        
         with st.expander("🔑 تغيير كلمة المرور"):
-            # حقول إدخال مع كليشة CSS تمنع التداخل
-            new_p = st.text_input("كلمة المرور الجديدة", type="password", key="new_p_input")
-            confirm_p = st.text_input("تأكيد الكلمة", type="password", key="conf_p_input")
+            new_p = st.text_input("كلمة المرور الجديدة", type="password")
+            confirm_p = st.text_input("تأكيد الكلمة", type="password")
             if st.button("حفظ وتحديث الشيت", use_container_width=True):
                 if new_p and new_p == confirm_p:
-                    if update_password_only(st.session_state.user_info['username'], new_p):
-                        st.success("✅ تم التحديث بنجاح!")
-                    else: st.error("⚠️ فشل الاتصال بالشيت")
+                    if update_pwd(st.session_state.user_info['username'], new_p):
+                        st.success("✅ تم التحديث")
+                    else: st.error("⚠️ فشل الاتصال")
                 else: st.warning("⚠️ لا يوجد تطابق")
-        
         if st.button("🚪 خروج", use_container_width=True):
             st.session_state.auth = False
             st.rerun()
 
-    # العنوان الرئيسي
     st.markdown(f'<div class="glass-header"><h1 style="color:#1e3a8a; margin:0;">🏫 نظام مدرسة الشيخ عبدالعزيز</h1><p>الأستاذ {st.session_state.user_info["full_name"]}</p></div>', unsafe_allow_html=True)
 
     _, col_choice, _ = st.columns([1, 2, 1])
@@ -174,7 +143,6 @@ else:
             sid, name, cpr, serial = s
             status = st.session_state.attendance.get(sid, None)
             st.markdown(f'<div class="student-card"><div style="color:#1e3a8a; font-weight:900; font-size:1.6rem;">{name}</div><div style="font-weight:bold; color:#475569;">🆔: {sid} | 💳: {cpr} | 🔢: {serial}</div></div>', unsafe_allow_html=True)
-            
             c1, c2, c3, _ = st.columns([1.5, 1.5, 1.5, 5])
             with c1:
                 if st.button("🚫 غياب", key=f"a_{sid}", use_container_width=True, disabled=st.session_state.submitted or status == 'absent'):
@@ -191,7 +159,8 @@ else:
             abs_c = list(st.session_state.attendance.values()).count('absent')
             lat_c = list(st.session_state.attendance.values()).count('late')
             st.markdown(f'<div style="background:rgba(30,58,138,0.1); padding:20px; border-radius:20px; border:2px solid #1e3a8a; text-align:center;"><h3>📊 ملخص الرصد</h3><p>الغياب: {abs_c} | التأخير: {lat_c}</p></div>', unsafe_allow_html=True)
-            
             if not st.session_state.submitted:
                 if st.button("🚀 اعتماد التقرير النهائي", type="primary", use_container_width=True):
-                    st.session_state.submitted = True; st.balloons(); st.rerun()~
+                    st.session_state.submitted = True
+                    st.balloons()
+                    st.rerun()
