@@ -23,17 +23,25 @@ st.markdown("""
         background-color: #f8fafc;
     }
 
-    .main-title { text-align: center; color: #1e3a8a; font-weight: 900; font-size: 2.2rem; margin-top: 10px; }
+    /* العنوان الرئيسي في نص الشاشة H1 */
+    .main-title { 
+        text-align: center; 
+        color: #1e3a8a; 
+        font-weight: 900; 
+        font-size: 2.5rem; 
+        margin-top: 20px;
+        margin-bottom: 10px;
+    }
 
     input[type="password"], input[type="text"] {
         text-align: left !important;
         direction: ltr !important;
     }
 
+    /* توسيط واختيار الفصل */
     div[data-testid="stSelectbox"] { max-width: 500px; margin: 0 auto; }
     .select-label { text-align: center; font-weight: bold; font-size: 1.2rem; margin-top: 20px; color: #1e3a8a; }
 
-    .sidebar-school { text-align: right; color: #64748b; font-size: 0.85rem; font-weight: 600; margin-bottom: -5px; }
     .sidebar-user {
         display: flex; align-items: center; justify-content: flex-start;
         gap: 10px; flex-direction: row-reverse;
@@ -46,9 +54,16 @@ st.markdown("""
         border-right: 8px solid #1e3a8a; text-align: right;
     }
     
-    .stats-box {
-        background: #eff6ff; padding: 20px; border-radius: 15px;
-        border: 1px solid #bfdbfe; text-align: center; margin-top: 30px;
+    /* صندوق الإحصائيات الموضح وفي المنتصف */
+    .stats-container {
+        max-width: 700px;
+        margin: 40px auto;
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 20px;
+        border: 2px solid #1e3a8a;
+        text-align: center;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -94,8 +109,6 @@ if not st.session_state.auth:
 # --- النظام الرئيسي ---
 else:
     with st.sidebar:
-        # إضافة اسم المدرسة فوق اسم الأستاذ
-        st.markdown('<div class="sidebar-school">مدرسة الشيخ عبدالعزيز بن محمد آل خليفة</div>', unsafe_allow_html=True)
         full_name = st.session_state.user_info.get('full_name', 'أستاذ')
         st.markdown(f'<div class="sidebar-user"><span>الأستاذ {full_name}</span><span>👤</span></div>', unsafe_allow_html=True)
         st.divider()
@@ -112,6 +125,7 @@ else:
             st.session_state.auth = False
             st.rerun()
 
+    # اسم المدرسة في نص الشاشة فوق بالـ H1
     st.markdown('<h1 class="main-title">مدرسة الشيخ عبدالعزيز بن محمد آل خليفة الثانوية للبنين</h1>', unsafe_allow_html=True)
     st.markdown(f'<h3 style="text-align:center; color:#475569;">مرحباً بك أستاذ {st.session_state.user_info.get("full_name")}</h3>', unsafe_allow_html=True)
     st.write("---")
@@ -143,17 +157,24 @@ else:
                 with c2: st.button("⏰ تأخير", key=f"l_{std[0]}", use_container_width=True)
                 with c3: st.button("🔄 تراجع", key=f"r_{std[0]}", use_container_width=True)
 
-            # --- قسم إحصائيات الرصد وإرسال التقرير في النهاية ---
-            st.markdown('<div class="stats-box">', unsafe_allow_html=True)
-            st.markdown('<h3>📊 إحصائيات الرصد الحالية</h3>', unsafe_allow_html=True)
+            # --- قسم إحصائيات الرصد (واضح وفي النص) ---
+            st.markdown('<div class="stats-container">', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#1e3a8a; margin-bottom:20px;">📊 ملخص رصد الفصل</h2>', unsafe_allow_html=True)
+            
+            # عرض الإحصائيات بشكل واضح
             col_s1, col_s2, col_s3 = st.columns(3)
-            col_s1.metric("إجمالي الطلاب", len(students))
-            col_s2.metric("عدد الغياب", st.session_state.attendance_data["absent"], delta_color="inverse")
-            col_s3.metric("عدد التأخير", st.session_state.attendance_data["late"], delta_color="inverse")
+            with col_s1:
+                st.metric("إجمالي الطلاب", len(students))
+            with col_s2:
+                st.metric("عدد الغياب", st.session_state.attendance_data["absent"])
+            with col_s3:
+                st.metric("عدد التأخير", st.session_state.attendance_data["late"])
             
             st.write("<br>", unsafe_allow_html=True)
-            if st.button("📤 إرسال التقرير النهائي", use_container_width=True, type="primary"):
-                st.success(f"✅ تم إرسال تقرير فصل {choice_label} بنجاح إلى الإدارة.")
+            # زر الإرسال متاح دائماً حتى لو الغياب 0
+            if st.button("📤 إرسال التقرير النهائي للإدارة", use_container_width=True, type="primary"):
+                st.balloons()
+                st.success(f"✅ تم اعتماد وإرسال تقرير فصل {choice_label} بنجاح.")
             st.markdown('</div>', unsafe_allow_html=True)
 
     except Exception as e:
