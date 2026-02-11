@@ -13,34 +13,30 @@ SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzHDhKY2VZxFu0RyUf9P-3jnm9
 
 CLASS_NAMES = {"11": "1 علم 1", "12": "1 علم 2", "21": "2 علم 1", "22": "2 علم 2", "31": "3 علم 1", "32": "32 علم 2"}
 
-# 2. التنسيق الجمالي (CSS)
+# 2. التنسيق الجمالي (CSS) - تحسين وضوح التقرير
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
     
     html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Cairo', sans-serif; direction: rtl !important; text-align: right !important;
-        background-color: #f8fafc;
+        background-color: #f1f5f9;
     }
 
-    /* العنوان الرئيسي في نص الشاشة H1 */
+    /* العنوان الرئيسي H1 موسط */
     .main-title { 
         text-align: center; 
         color: #1e3a8a; 
         font-weight: 900; 
         font-size: 2.5rem; 
-        margin-top: 20px;
-        margin-bottom: 10px;
+        margin: 20px 0;
     }
 
     input[type="password"], input[type="text"] {
-        text-align: left !important;
-        direction: ltr !important;
+        text-align: left !important; direction: ltr !important;
     }
 
-    /* توسيط واختيار الفصل */
     div[data-testid="stSelectbox"] { max-width: 500px; margin: 0 auto; }
-    .select-label { text-align: center; font-weight: bold; font-size: 1.2rem; margin-top: 20px; color: #1e3a8a; }
 
     .sidebar-user {
         display: flex; align-items: center; justify-content: flex-start;
@@ -54,16 +50,25 @@ st.markdown("""
         border-right: 8px solid #1e3a8a; text-align: right;
     }
     
-    /* صندوق الإحصائيات الموضح وفي المنتصف */
-    .stats-container {
-        max-width: 700px;
-        margin: 40px auto;
-        background: #ffffff;
-        padding: 30px;
-        border-radius: 20px;
-        border: 2px solid #1e3a8a;
+    /* صندوق التقرير المطور - موسط وواضح جداً */
+    .report-card {
+        max-width: 600px;
+        margin: 50px auto;
+        background: #ebf8ff; /* خلفية سماوية فاتحة وواضحة */
+        padding: 40px;
+        border-radius: 25px;
+        border: 3px solid #3182ce;
         text-align: center;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    .report-header { color: #2c5282; font-weight: 900; font-size: 1.8rem; margin-bottom: 15px; }
+    
+    /* تنسيق أرقام الإحصائيات */
+    [data-testid="stMetricValue"] {
+        font-size: 2.2rem !important;
+        color: #2b6cb0 !important;
+        font-weight: 800 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -77,7 +82,8 @@ except Exception:
     st.stop()
 
 if 'auth' not in st.session_state: st.session_state.auth = False
-if 'attendance_data' not in st.session_state: st.session_state.attendance_data = {"absent": 0, "late": 0}
+# تهيئة بيانات الرصد في حال لم تكن موجودة
+if 'attendance_counts' not in st.session_state: st.session_state.attendance_counts = {"absent": 0, "late": 0}
 
 def update_pwd(u, p):
     try:
@@ -125,9 +131,9 @@ else:
             st.session_state.auth = False
             st.rerun()
 
-    # اسم المدرسة في نص الشاشة فوق بالـ H1
+    # اسم المدرسة كعنوان رئيسي موسط
     st.markdown('<h1 class="main-title">مدرسة الشيخ عبدالعزيز بن محمد آل خليفة الثانوية للبنين</h1>', unsafe_allow_html=True)
-    st.markdown(f'<h3 style="text-align:center; color:#475569;">مرحباً بك أستاذ {st.session_state.user_info.get("full_name")}</h3>', unsafe_allow_html=True)
+    st.markdown(f'<h3 style="text-align:center; color:#4a5568;">مرحباً بك أستاذ {st.session_state.user_info.get("full_name")}</h3>', unsafe_allow_html=True)
     st.write("---")
 
     try:
@@ -135,7 +141,7 @@ else:
             res_sec = conn.execute(text("SELECT DISTINCT class_section FROM students ORDER BY class_section")).fetchall()
         sections = [str(r[0]) for r in res_sec]
         
-        st.markdown('<p class="select-label">🎯 اختر الصف الدراسي</p>', unsafe_allow_html=True)
+        st.markdown('<p style="text-align:center; font-weight:bold; color:#1e3a8a;">🎯 اختر الصف الدراسي</p>', unsafe_allow_html=True)
         choice_label = st.selectbox("", ["-- اختر من القائمة --"] + [CLASS_NAMES.get(s, f"صف {s}") for s in sections], label_visibility="collapsed")
         
         if choice_label != "-- اختر من القائمة --":
@@ -157,24 +163,23 @@ else:
                 with c2: st.button("⏰ تأخير", key=f"l_{std[0]}", use_container_width=True)
                 with c3: st.button("🔄 تراجع", key=f"r_{std[0]}", use_container_width=True)
 
-            # --- قسم إحصائيات الرصد (واضح وفي النص) ---
-            st.markdown('<div class="stats-container">', unsafe_allow_html=True)
-            st.markdown('<h2 style="color:#1e3a8a; margin-bottom:20px;">📊 ملخص رصد الفصل</h2>', unsafe_allow_html=True)
+            # --- التقرير النهائي (موسط وبخلفية مميزة) ---
+            st.markdown('<div class="report-card">', unsafe_allow_html=True)
+            st.markdown(f'<div class="report-header">📋 ملخص رصد {choice_label}</div>', unsafe_allow_html=True)
             
-            # عرض الإحصائيات بشكل واضح
-            col_s1, col_s2, col_s3 = st.columns(3)
-            with col_s1:
-                st.metric("إجمالي الطلاب", len(students))
-            with col_s2:
-                st.metric("عدد الغياب", st.session_state.attendance_data["absent"])
-            with col_s3:
-                st.metric("عدد التأخير", st.session_state.attendance_data["late"])
+            col_r1, col_r2, col_r3 = st.columns(3)
+            with col_r1:
+                st.metric("الطلاب", len(students))
+            with col_r2:
+                st.metric("الغياب", st.session_state.attendance_counts["absent"])
+            with col_r3:
+                st.metric("التأخير", st.session_state.attendance_counts["late"])
             
             st.write("<br>", unsafe_allow_html=True)
-            # زر الإرسال متاح دائماً حتى لو الغياب 0
+            # الزر متاح دائماً حتى لو الغياب 0
             if st.button("📤 إرسال التقرير النهائي للإدارة", use_container_width=True, type="primary"):
                 st.balloons()
-                st.success(f"✅ تم اعتماد وإرسال تقرير فصل {choice_label} بنجاح.")
+                st.success(f"✅ تم إرسال تقرير {choice_label} بنجاح.")
             st.markdown('</div>', unsafe_allow_html=True)
 
     except Exception as e:
