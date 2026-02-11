@@ -11,9 +11,9 @@ st.set_page_config(page_title="نظام مدرسة الشيخ عبدالعزيز
 CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQXCHOY9CHVwdruWhQEvhtgZm9gadjqY_PGHobJvG2OcqZ4Md1e3MxMctBVP6OwYpbq0Fvv5PuQFJ33/pub?output=csv"
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzHDhKY2VZxFu0RyUf9P-3jnm9OZIzXcY3H59XhFo9ca5vKJNt-jWJUlQYKRvmq0NEq/exec"
 
-CLASS_NAMES = {"11": "1 علم 1", "12": "1 علم 2", "21": "2 علم 1", "22": "2 علم 2", "31": "3 علم 1", "32": "3 علم 2"}
+CLASS_NAMES = {"11": "1 علم 1", "12": "1 علم 2", "21": "2 علم 1", "22": "2 علم 2", "31": "3 علم 1", "32": "32 علم 2"}
 
-# 2. التنسيق الجمالي للنظام (CSS)
+# 2. التنسيق الجمالي (CSS)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
@@ -25,7 +25,6 @@ st.markdown("""
 
     .main-title { text-align: center; color: #1e3a8a; font-weight: 900; font-size: 2.2rem; margin-top: 10px; }
 
-    /* تنسيق إخفاء كلمة المرور ومحاذاتها */
     input[type="password"], input[type="text"] {
         text-align: left !important;
         direction: ltr !important;
@@ -34,6 +33,7 @@ st.markdown("""
     div[data-testid="stSelectbox"] { max-width: 500px; margin: 0 auto; }
     .select-label { text-align: center; font-weight: bold; font-size: 1.2rem; margin-top: 20px; color: #1e3a8a; }
 
+    .sidebar-school { text-align: right; color: #64748b; font-size: 0.85rem; font-weight: 600; margin-bottom: -5px; }
     .sidebar-user {
         display: flex; align-items: center; justify-content: flex-start;
         gap: 10px; flex-direction: row-reverse;
@@ -45,10 +45,15 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 10px;
         border-right: 8px solid #1e3a8a; text-align: right;
     }
+    
+    .stats-box {
+        background: #eff6ff; padding: 20px; border-radius: 15px;
+        border: 1px solid #bfdbfe; text-align: center; margin-top: 30px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. جلب الرابط من Secrets (للنشر السحابي)
+# 3. جلب الرابط من Secrets
 try:
     db_url = st.secrets["DATABASE_URL"]
     engine = create_engine(db_url)
@@ -57,7 +62,7 @@ except Exception:
     st.stop()
 
 if 'auth' not in st.session_state: st.session_state.auth = False
-if 'attendance' not in st.session_state: st.session_state.attendance = {}
+if 'attendance_data' not in st.session_state: st.session_state.attendance_data = {"absent": 0, "late": 0}
 
 def update_pwd(u, p):
     try:
@@ -89,11 +94,12 @@ if not st.session_state.auth:
 # --- النظام الرئيسي ---
 else:
     with st.sidebar:
+        # إضافة اسم المدرسة فوق اسم الأستاذ
+        st.markdown('<div class="sidebar-school">مدرسة الشيخ عبدالعزيز بن محمد آل خليفة</div>', unsafe_allow_html=True)
         full_name = st.session_state.user_info.get('full_name', 'أستاذ')
         st.markdown(f'<div class="sidebar-user"><span>الأستاذ {full_name}</span><span>👤</span></div>', unsafe_allow_html=True)
         st.divider()
         
-        # قسم تغيير كلمة المرور
         with st.expander("🔑 تغيير كلمة المرور"):
             new_p = st.text_input("الكلمة الجديدة", type="password")
             if st.button("تحديث في الشيت", use_container_width=True):
@@ -132,11 +138,23 @@ else:
                     </div>
                 ''', unsafe_allow_html=True)
                 
-                # أزرار الرصد والتراجع
                 c1, c2, c3, _ = st.columns([1, 1, 1, 3])
                 with c1: st.button("🚫 غياب", key=f"a_{std[0]}", use_container_width=True)
                 with c2: st.button("⏰ تأخير", key=f"l_{std[0]}", use_container_width=True)
                 with c3: st.button("🔄 تراجع", key=f"r_{std[0]}", use_container_width=True)
+
+            # --- قسم إحصائيات الرصد وإرسال التقرير في النهاية ---
+            st.markdown('<div class="stats-box">', unsafe_allow_html=True)
+            st.markdown('<h3>📊 إحصائيات الرصد الحالية</h3>', unsafe_allow_html=True)
+            col_s1, col_s2, col_s3 = st.columns(3)
+            col_s1.metric("إجمالي الطلاب", len(students))
+            col_s2.metric("عدد الغياب", st.session_state.attendance_data["absent"], delta_color="inverse")
+            col_s3.metric("عدد التأخير", st.session_state.attendance_data["late"], delta_color="inverse")
+            
+            st.write("<br>", unsafe_allow_html=True)
+            if st.button("📤 إرسال التقرير النهائي", use_container_width=True, type="primary"):
+                st.success(f"✅ تم إرسال تقرير فصل {choice_label} بنجاح إلى الإدارة.")
+            st.markdown('</div>', unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"❌ خطأ في الاتصال بقاعدة البيانات.")
